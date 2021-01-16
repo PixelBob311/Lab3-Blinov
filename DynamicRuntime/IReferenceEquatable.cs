@@ -1,0 +1,4 @@
+﻿namespace DynamicRuntime {
+	interface IReferenceEquatable {
+	}
+}

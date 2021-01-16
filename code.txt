@@ -1,0 +1,74 @@
+1;
+(1);
+1 + 2;
+1 - 2;
+1 * 2;
+1 / 2;
+1 % 2;
+1 == 2;
+1 < 2;
+dump();
+dump(7 + 3, 7 - 3, 7 * 3, 7 / 3, 7 % 3);
+dump(null == null, null < null);
+dump(false == null, false == false, false < false);
+dump(true == null, true == false, true < false, true == true, true < true);
+dump(0 == null, 0 == false, 0 == true, 0 == 0, 0 < 0);
+dump(10 == null, 10 == false, 10 == true, 10 == 0, 10 < 0, 10 == 10, 10 < 10);
+dump(dump == null, dump == false, dump == true, dump == 0, dump == true, dump == dump);
+dump(trace == null, trace == false, trace == true, trace == 0, trace == 10, trace == dump, trace == trace);
+dump(true == 2 < 3);
+dump()(1)(2, 3)(dump)(trace);
+dump(trace(13));
+((trace))((dump))(123);
+if (1 == 2) {
+	dump(1);
+}
+// if (1) { } // должно упасть во время выполнениея
+var p = 123;
+var p = p + 1;
+p = p + 1;
+dump(p);
+var dd = dump;
+dd(p + 1);
+var x = 5;
+while (x < 6) {
+	dump(1);
+	x = x + 1;
+}
+while (0 < x) {
+	dump(x);
+	x = x - 1;
+	p = 6;
+	if (true) {
+		dump(true);
+	}
+}
+var s = 0;
+if (true) {
+	var i = 0;
+	while (i < 10000) {
+		s = s + i * i;
+		i = i + 1;
+	}
+}
+dump(s);
+var a = 0;
+if (true) {
+	if (true) {
+		var a = 1;
+		var a = 2;
+		if (true) {
+			a = 12;
+			var a = 3;
+		}
+		dump(a);
+	}
+	var a = 4;
+	if (true) {
+		var a = 5;
+	}
+	dump(a);
+}
+dump(a);
+/*
+*/

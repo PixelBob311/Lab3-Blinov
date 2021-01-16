@@ -7,6 +7,8 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+
 namespace Lab3.DynamicCompiling {
 	sealed class Compiler : IStatementVisitor, IExpressionVisitor {
 		static readonly VariableDefinition missingVariable = null;
@@ -75,12 +77,26 @@ namespace Lab3.DynamicCompiling {
 			statement.Accept(this);
 		}
 		public void VisitIf(If ifStatement) {
-			CompileExpression(ifStatement.Condition);
-			EmitRuntimeCall(nameof(Op.ToBool));
-			var afterIf = Instruction.Create(OpCodes.Nop);
-			cil.Emit(OpCodes.Brfalse, afterIf);
-			CompileBlock(ifStatement.Body);
-			cil.Append(afterIf);
+			var end = Instruction.Create(OpCodes.Nop);
+			INode block = ifStatement;
+			while (block != null) {
+				if (block is If) {
+					CompileExpression(((If)block).Condition);
+					EmitRuntimeCall(nameof(Op.ToBool));
+					var next = Instruction.Create(OpCodes.Nop);
+					cil.Emit(OpCodes.Brfalse, next);
+					CompileBlock(((If)block).Body);
+					cil.Emit(OpCodes.Br, end);
+					cil.Append(next);
+					block = ((If)block)._else;
+				}
+				else {
+					CompileBlock((Block)block);
+					cil.Emit(OpCodes.Br, end);
+					block = null;
+				}
+			}
+			cil.Append(end);
 		}
 		public void VisitWhile(While whileStatement) {
 			var loopLabel = Instruction.Create(OpCodes.Nop);
@@ -128,25 +144,25 @@ namespace Lab3.DynamicCompiling {
 		public void VisitBinary(Binary binary) {
 			CompileExpression(binary.Left);
 			CompileExpression(binary.Right);
-			if (binary.OperatorString == "+") {//сравнивать операторы
+			if (binary.Operator == BinaryOperator.Addition) {
 				EmitRuntimeCall(nameof(Op.Add));
 			}
-			else if (binary.OperatorString == "-") {
+			else if (binary.Operator == BinaryOperator.Subtraction) {
 				EmitRuntimeCall(nameof(Op.Sub));
 			}
-			else if (binary.OperatorString == "*") {
+			else if (binary.Operator == BinaryOperator.Multiplication) {
 				EmitRuntimeCall(nameof(Op.Mul));
 			}
-			else if (binary.OperatorString == "/") {
+			else if (binary.Operator == BinaryOperator.Division) {
 				EmitRuntimeCall(nameof(Op.Div));
 			}
-			else if (binary.OperatorString == "%") {
+			else if (binary.Operator == BinaryOperator.Remainder) {
 				EmitRuntimeCall(nameof(Op.Rem));
 			}
-			else if (binary.OperatorString == "<") {
+			else if (binary.Operator == BinaryOperator.Less) {
 				EmitRuntimeCall(nameof(Op.Lt));
 			}
-			else if (binary.OperatorString == "==") {
+			else if (binary.Operator == BinaryOperator.Equal) {
 				EmitRuntimeCall(nameof(Op.Eq));
 			}
 			else {
@@ -172,7 +188,7 @@ namespace Lab3.DynamicCompiling {
 		}
 		//ребейз сделать!
 		public void VisitNumber(Number number) {//переделать как в лабе другой.
-			if (!int.TryParse(number.Lexeme, out int value)) {
+			if (!int.TryParse(number.Lexeme, NumberStyles.None, NumberFormatInfo.InvariantInfo, out int value)) {
 				throw MakeError(number, $"Не удалось преобразовать {number.Lexeme} к intger");
 			}
 			cil.Emit(OpCodes.Ldc_I4, value);

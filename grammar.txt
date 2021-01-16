@@ -13,7 +13,12 @@ VariableDeclaration:
 VariableAssignment:
 	Identifier '=' Expression ';'
 If:
-	'if' '(' Expression ')' Block
+	'if' '(' Expression ')' Block ElseIf?
+ElseIf:
+	'else' 'if' '(' Expression ')' Block ElseIf
+	Else?
+Else
+	'else' Block
 While:
 	'while' '(' Expression ')' Block
 Block:

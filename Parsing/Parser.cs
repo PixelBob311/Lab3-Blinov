@@ -86,13 +86,47 @@ namespace Lab3.Parsing {
 			}
 			return new Block(statements);
 		}
+		//IElseIf ParseElseIf() {
+		//	if (SkipIf("else")) {
+		//		if (SkipIf("if")) {
+		//			Expect("(");
+		//			var condition = ParseExpression();
+		//			Expect(")");
+		//			var Block = ParseBlock();
+		//			var Elseif = ParseElseIf();
+		//			return new If(condition, Block, Elseif);
+		//		}
+		//		var block = ParseBlock();
+		//		return new Else(block);
+		//	}
+		//	return null;
+		//}
 		IStatement ParseStatement() {
 			if (SkipIf("if")) {
 				Expect("(");
 				var condition = ParseExpression();
 				Expect(")");
 				var block = ParseBlock();
-				return new If(condition, block);
+				var nested = new List<Tuple<IExpression, Block>>();
+				INode _else = null;
+				while (SkipIf("else")) {
+					if (SkipIf("if")) {
+						Expect("(");
+						var innerCondition = ParseExpression();//условие
+						Expect(")");
+						var innerBlock = ParseBlock();//тело самого ифа
+						nested.Add(new Tuple<IExpression, Block>(innerCondition, innerBlock));
+					}
+					else {
+						if (_else != null) {
+							throw MakeError("Появился мусор какой-то");
+						}
+						_else = ParseBlock();
+					}
+				}
+				nested.Reverse();
+				//var t = nested.Aggregate(_else, (prev, current) => new If(current.Item1, current.Item2, prev));
+				return new If(condition, block, nested.Aggregate(_else, (prev, current) => new If(current.Item1, current.Item2, prev)));
 			}
 			if (SkipIf("while")) {
 				Expect("(");

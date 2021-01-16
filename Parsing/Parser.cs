@@ -92,7 +92,23 @@ namespace Lab3.Parsing {
 				var condition = ParseExpression();
 				Expect(")");
 				var block = ParseBlock();
-				return new If(condition, block);
+				var nested = new List<Tuple<IExpression, Block>>();
+				INode elseIf = null;
+				while (SkipIf("else")) {
+					if (SkipIf("if")) {
+						Expect("(");
+						var innerCondition = ParseExpression();
+						Expect(")");
+						var innerBlock = ParseBlock();
+						nested.Add(new Tuple<IExpression, Block>(innerCondition, innerBlock));
+					}
+					else {
+						elseIf = ParseBlock();
+						break;
+					}
+				}
+				nested.Reverse();
+				return new If(condition, block, nested.Aggregate(elseIf, (prev, current) => new If(current.Item1, current.Item2, prev)));
 			}
 			if (SkipIf("while")) {
 				Expect("(");

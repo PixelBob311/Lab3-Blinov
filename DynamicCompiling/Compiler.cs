@@ -76,12 +76,26 @@ namespace Lab3.DynamicCompiling {
 			statement.Accept(this);
 		}
 		public void VisitIf(If ifStatement) {
-			CompileExpression(ifStatement.Condition);
-			EmitRuntimeCall(nameof(Op.ToBool));
-			var afterIf = Instruction.Create(OpCodes.Nop);
-			cil.Emit(OpCodes.Brfalse, afterIf);
-			CompileBlock(ifStatement.Body);
-			cil.Append(afterIf);
+			var end = Instruction.Create(OpCodes.Nop);
+			INode block = ifStatement;
+			while (block != null) {
+				if (block is If b) {
+					CompileExpression(b.Condition);
+					EmitRuntimeCall(nameof(Op.ToBool));
+					var afterIf = Instruction.Create(OpCodes.Nop);
+					cil.Emit(OpCodes.Brfalse, afterIf);
+					CompileBlock(b.Body);
+					cil.Emit(OpCodes.Br, end);
+					cil.Append(afterIf);
+					block = b.ElseIf;
+				}
+				else {
+					CompileBlock((Block)block);
+					cil.Emit(OpCodes.Br, end);
+					block = null;
+				}
+			}
+			cil.Append(end);
 		}
 		public void VisitWhile(While whileStatement) {
 			var loopLabel = Instruction.Create(OpCodes.Nop);

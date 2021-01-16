@@ -75,13 +75,27 @@ namespace Lab3.DynamicCompiling {
 			statement.Accept(this);
 		}
 		public void VisitIf(If ifStatement) {
-			throw new NotImplementedException();
+			CompileExpression(ifStatement.Condition);
+			EmitRuntimeCall(nameof(Op.ToBool));
+			var afterIf = Instruction.Create(OpCodes.Nop);
+			cil.Emit(OpCodes.Brfalse, afterIf);
+			CompileBlock(ifStatement.Body);
+			cil.Append(afterIf);
 		}
 		public void VisitWhile(While whileStatement) {
-			throw new NotImplementedException();
+			var loopLabel = Instruction.Create(OpCodes.Nop);
+			var afterLoop = Instruction.Create(OpCodes.Nop);
+			cil.Append(loopLabel);
+			CompileExpression(whileStatement.Condition);
+			EmitRuntimeCall(nameof(Op.ToBool));
+			cil.Emit(OpCodes.Brfalse, afterLoop);
+			CompileBlock(whileStatement.Body);
+			cil.Emit(OpCodes.Br, loopLabel);
+			cil.Append(afterLoop);
 		}
 		public void VisitExpressionStatement(ExpressionStatement expressionStatement) {
-			throw new NotImplementedException();
+			CompileExpression(expressionStatement.Expr);
+			cil.Emit(OpCodes.Pop);
 		}
 		public void VisitVariableDeclaration(VariableDeclaration variableDeclaration) {
 			CompileExpression(variableDeclaration.Expr);
@@ -112,16 +126,57 @@ namespace Lab3.DynamicCompiling {
 			expression.Accept(this);
 		}
 		public void VisitBinary(Binary binary) {
-			throw new NotImplementedException();
+			CompileExpression(binary.Left);
+			CompileExpression(binary.Right);
+			if (binary.OperatorString == "+") {//сравнивать операторы
+				EmitRuntimeCall(nameof(Op.Add));
+			}
+			else if (binary.OperatorString == "-") {
+				EmitRuntimeCall(nameof(Op.Sub));
+			}
+			else if (binary.OperatorString == "*") {
+				EmitRuntimeCall(nameof(Op.Mul));
+			}
+			else if (binary.OperatorString == "/") {
+				EmitRuntimeCall(nameof(Op.Div));
+			}
+			else if (binary.OperatorString == "%") {
+				EmitRuntimeCall(nameof(Op.Rem));
+			}
+			else if (binary.OperatorString == "<") {
+				EmitRuntimeCall(nameof(Op.Lt));
+			}
+			else if (binary.OperatorString == "==") {
+				EmitRuntimeCall(nameof(Op.Eq));
+			}
+			else {
+				throw MakeError(binary, $"Неизвестная операция {binary.Operator}");
+			}
 		}
 		public void VisitCall(Call call) {
-			throw new NotImplementedException();
+			CompileExpression(call.Function);
+			cil.Emit(OpCodes.Ldc_I4, call.Arguments.Count);
+			cil.Emit(OpCodes.Newarr, module.TypeSystem.Object);
+			var index = 0;
+			foreach (var arg in call.Arguments) {
+				cil.Emit(OpCodes.Dup);
+				cil.Emit(OpCodes.Ldc_I4, index);
+				CompileExpression(arg);
+				cil.Emit(OpCodes.Stelem_Ref);
+				index++;
+			}
+			EmitRuntimeCall(nameof(Op.Call));
 		}
 		public void VisitParentheses(Parentheses parentheses) {
-			throw new NotImplementedException();
+			CompileExpression(parentheses.Expr);
 		}
-		public void VisitNumber(Number number) {
-			throw new NotImplementedException();
+		//ребейз сделать!
+		public void VisitNumber(Number number) {//переделать как в лабе другой.
+			if (!int.TryParse(number.Lexeme, out int value)) {
+				throw MakeError(number, $"Не удалось преобразовать {number.Lexeme} к intger");
+			}
+			cil.Emit(OpCodes.Ldc_I4, value);
+			cil.Emit(OpCodes.Box, module.TypeSystem.Int32);
 		}
 		public void VisitIdentifier(Identifier identifier) {
 			if (!variables.TryGetValue(identifier.Name, out var variable)) {
